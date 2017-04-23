@@ -32,11 +32,16 @@ fn main() {
       return;
     }
   };
+
+  let message_prepend: String = match env::args().nth(3) {
+    Some(message_prepend) => message_prepend.to_owned(),
+    None => "".to_owned()
+  };
   
   let weather_report = str::replace(&get_weather(), "\"", "");
 
   let url  = format!("https://api.twilio.com/2010-04-01/Accounts/{}/Messages.json", account_sid).to_owned();
-  let data = format!("From={}&To={}&Body={}", from_number, to_number, weather_report);
+  let data = format!("From={}&To={}&Body={}{}", from_number, to_number, message_prepend, weather_report);
   
   let mut res = get_client()
                 .post(&url)
@@ -52,7 +57,7 @@ fn main() {
   let mut s = String::new();
   res.read_to_string(&mut s).unwrap();
 
-  println!("{}", s);
+  println!("Server responded with : {}", s);
 }
 
 
@@ -83,7 +88,11 @@ fn get_weather() -> String {
     panic!("Failed to parse json : {}", e)
   });
 
+  format_weather(json)
+}
 
+
+fn format_weather(json: Value) -> String {
   let ref sunset       = json["query"]["results"]["channel"]["astronomy"]["sunset"];
   let ref current_temp = json["query"]["results"]["channel"]["item"]["condition"]["temp"];
   let ref current_text = json["query"]["results"]["channel"]["item"]["condition"]["text"];
@@ -93,7 +102,7 @@ fn get_weather() -> String {
 
   let text = format!("Currently {} C and {}. Today {} with a high of {} and low of {}. Today's sunset is at {}", current_temp, current_text, daily_text, daily_high, daily_low, sunset);
   println!("Preparing weather report : {}", text);
-  
+
   text
 }
 
