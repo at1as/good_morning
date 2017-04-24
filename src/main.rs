@@ -1,6 +1,5 @@
 extern crate hyper;
 extern crate hyper_native_tls;
-extern crate serde;
 extern crate serde_json;
 
 use hyper::{client, Client, status, Url};
@@ -20,7 +19,7 @@ fn main() {
   let auth_token: String = match env::args().nth(1) {
     Some(auth_token) => auth_token.to_owned(),
     None => {
-      println!("Usage : cargo run <auth_token> <to_number>");
+      print_usage();
       return;
     }
   };
@@ -28,17 +27,26 @@ fn main() {
   let to_number: String = match env::args().nth(2) {
     Some(to_number) => str::replace(&to_number, "+", "%2B").to_owned(),
     None => {
-      println!("Usage: cargo run <auth_token> <to_number>");
+      print_usage();
       return;
     }
   };
 
-  let message_prepend: String = match env::args().nth(3) {
+  let city: String = match env::args().nth(3) {
+    Some(city) => city.to_owned(),
+    None => {
+      print_usage();
+      return;
+    }
+  };
+
+  let message_prepend: String = match env::args().nth(4) {
     Some(message_prepend) => message_prepend.to_owned(),
     None => "".to_owned()
   };
+
   
-  let weather_report = str::replace(&get_weather(), "\"", "");
+  let weather_report = get_weather(city);
 
   let url  = format!("https://api.twilio.com/2010-04-01/Accounts/{}/Messages.json", account_sid).to_owned();
   let data = format!("From={}&To={}&Body={}{}", from_number, to_number, message_prepend, weather_report);
@@ -69,8 +77,7 @@ fn get_client() -> Client {
 }
 
 
-fn get_weather() -> String {
-  let city = "Montreal";
+fn get_weather(city: String) -> String {
   let query_url = format!("http://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20weather.forecast%20where%20woeid%20in%20(select%20woeid%20from%20geo.places(1)%20where%20text%3D%22{}%22)%20and%20u%3D'c'&format=json&env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys", &city);
 
   let client  = Client::new();
@@ -101,8 +108,23 @@ fn format_weather(json: Value) -> String {
   let ref daily_text   = json["query"]["results"]["channel"]["item"]["forecast"][0]["text"];
 
   let text = format!("Currently {} C and {}. Today {} with a high of {} and low of {}. Today's sunset is at {}", current_temp, current_text, daily_text, daily_high, daily_low, sunset);
-  println!("Preparing weather report : {}", text);
 
-  text
+  str::replace(&text, "\"", "")
+}
+
+fn print_usage() {
+  println!(r#"
+    Usage:
+      cargo run <auth_token> <to_number> "<city_name>" "<message_prepended_text>"
+
+    Example:
+      cargo run 747d2bfff9e6c6e0b7b3c5b3866597db +15556667788 "San Francisco" "Rise and shine!"
+
+    Example Response:
+      Text Message to +15556667788 reads "Rise and shine! Currently 10 C and cloudy. Today scattered showers ..."
+
+    Note:
+      <message_prepend_text> is an option field, all others are required.
+  "#);
 }
 
