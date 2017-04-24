@@ -9,12 +9,13 @@ use hyper_native_tls::NativeTlsClient;
 use serde_json::Value;
 use std::env;
 use std::io::Read;
+use std::fs::File;
 
 
 fn main() {
 
-  let account_sid = "AC67b1bb80dde5bbe63a0673736c5dcf26";
-  let from_number = "%2B16473609044";
+  let account_sid = get_config_variable("account_sid".to_owned());
+  let from_number = get_config_variable("from_number".to_owned());
 
   let auth_token: String = match env::args().nth(1) {
     Some(auth_token) => auth_token.to_owned(),
@@ -69,6 +70,20 @@ fn main() {
 }
 
 
+fn get_config_variable(key: String) -> String {
+  let mut file = File::open("src/public_conf.json").unwrap();
+  let mut contents = String::new();
+  file.read_to_string(&mut contents);
+
+  let json: Value = serde_json::from_str(&contents).unwrap();
+  let ref value = json[key];
+
+  let stripped_val: String = format!("{}", value);
+
+  str::replace(&stripped_val, "\"", "")
+}
+
+
 fn get_client() -> Client {
   let ssl = NativeTlsClient::new().unwrap();
   let connector = HttpsConnector::new(ssl);
@@ -115,7 +130,7 @@ fn format_weather(json: Value) -> String {
 fn print_usage() {
   println!(r#"
     Usage:
-      cargo run <auth_token> <to_number> "<city_name>" "<message_prepended_text>"
+      cargo run <twilio_auth_token> <to_number> "<city_name>" "<message_prepended_text>"
 
     Example:
       cargo run 747d2bfff9e6c6e0b7b3c5b3866597db +15556667788 "San Francisco" "Rise and shine!"

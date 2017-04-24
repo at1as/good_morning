@@ -7,6 +7,5 @@ authors = ["Jason Willems <jason@willems.ca>"]
 [dependencies]
 hyper = "0.10"
 hyper-native-tls = "0.2.2"
-serde = "0.9"
 serde_json = "0.9"
 
