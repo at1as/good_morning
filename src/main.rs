@@ -16,6 +16,9 @@ fn main() {
 
   let account_sid = get_config_variable("account_sid".to_owned(), "src/twilio_conf.json".to_owned());
   let from_number = get_config_variable("from_number".to_owned(), "src/twilio_conf.json".to_owned());
+  
+  let message_prepend = get_config_variable("message_prepend_text".to_owned(), "src/message_conf.json".to_owned());
+  let city = get_config_variable("city_location".to_owned(), "src/message_conf.json".to_owned());
 
   let auth_token: String = match env::args().nth(1) {
     Some(auth_token) => auth_token.to_owned(),
@@ -33,24 +36,10 @@ fn main() {
     }
   };
 
-  let city: String = match env::args().nth(3) {
-    Some(city) => city.to_owned(),
-    None => {
-      print_usage();
-      return;
-    }
-  };
-
-  let stock: String = "TWLO".to_owned();
-
-  let message_prepend: String = match env::args().nth(4) {
-    Some(message_prepend) => format!("{} ", message_prepend).to_owned(),
-    None => "".to_owned()
-  };
-
+  let stocks = get_config_variable("stocks".to_owned(), "src/message_conf.json".to_owned());
   
   let weather_report = get_weather(city);
-  let stock_report = get_stock(stock);
+  let stock_report = get_stock(stocks);
 
   let url  = format!("https://api.twilio.com/2010-04-01/Accounts/{}/Messages.json", account_sid).to_owned();
   let data = format!("From={}&To={}&Body={}{}{}", from_number, to_number, message_prepend, weather_report, stock_report);
@@ -79,11 +68,24 @@ fn get_config_variable(key: String, filename: String) -> String {
   file.read_to_string(&mut contents);
 
   let json: Value = serde_json::from_str(&contents).unwrap();
-  let ref value = json[key];
 
-  let stripped_val: String = format!("{}", value);
+  match json[key] {
+    Value::String(ref v) => {
+      let stripped_val: String = format!("{}", v);
+      str::replace(&stripped_val, "\"", "")
+    },
+    Value::Array(ref v) => {
+      let mut stocks = Vec::new();
+      
+      for x in v {
+        let str_val = serde_json::Value::as_str(x).unwrap();
+        stocks.push(str_val);
+      }
 
-  str::replace(&stripped_val, "\"", "")
+      str::replace(&stocks.join(&"+"), "\"", "")
+    },
+    _ => "".to_owned()
+  }
 }
 
 
@@ -125,7 +127,7 @@ fn format_weather(json: Value) -> String {
   let ref daily_low    = json["query"]["results"]["channel"]["item"]["forecast"][0]["low"];
   let ref daily_text   = json["query"]["results"]["channel"]["item"]["forecast"][0]["text"];
 
-  let text = format!("Currently {} C and {}. Today {} with a high of {} and low of {}. Today's sunset is at {}", current_temp, current_text, daily_text, daily_high, daily_low, sunset);
+  let text = format!("Currently {} C and {}. Today {} with a high of {} and low of {}. Today's sunset is at {}. ", current_temp, current_text, daily_text, daily_high, daily_low, sunset);
 
   str::replace(&text, "\"", "")
 }
@@ -158,7 +160,7 @@ fn get_stock(ticker: String) -> String {
   for stock_ticker in lines {
     let ticker_text: Vec<&str> = stock_ticker.split(|c| c == ',').collect();
 
-    stock_text.push_str(&format!("{}", ticker_text.join(" range ")));
+    stock_text.push_str(&format!("{} ", str::replace(&ticker_text.join(" : "), "\"", "")));
   }
 
   stock_text
@@ -168,16 +170,18 @@ fn get_stock(ticker: String) -> String {
 fn print_usage() {
   println!(r#"
     Usage:
-      cargo run <twilio_auth_token> <to_number> '<city_name>' '<message_prepended_text>'
+      cargo run <twilio_auth_token> <to_number>
 
     Example:
-      cargo run 747d2bfff9e6c6e0b7b3c5b3866597db +15556667788 'San Francisco' 'Rise and shine!'
+      cargo run 747d2bfff9e6c6e0b7b3c5b3866597db +15556667788
 
     Example Response:
       Text Message to +15556667788 reads "Rise and shine! Currently 10 C and cloudy. Today scattered showers ..."
 
-    Note:
+    Set other variables in src/message_conf.json:
       <message_prepend_text> is an option field, all others are required.
+      <city_location> name of city for weather report
+      <stocks> list of stocks for stock report
   "#);
 }
 
