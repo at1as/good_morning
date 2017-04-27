@@ -14,8 +14,8 @@ use std::fs::File;
 
 fn main() {
 
-  let account_sid = get_config_variable("account_sid".to_owned());
-  let from_number = get_config_variable("from_number".to_owned());
+  let account_sid = get_config_variable("account_sid".to_owned(), "src/twilio_conf.json".to_owned());
+  let from_number = get_config_variable("from_number".to_owned(), "src/twilio_conf.json".to_owned());
 
   let auth_token: String = match env::args().nth(1) {
     Some(auth_token) => auth_token.to_owned(),
@@ -41,16 +41,19 @@ fn main() {
     }
   };
 
+  let stock: String = "TWLO".to_owned();
+
   let message_prepend: String = match env::args().nth(4) {
-    Some(message_prepend) => message_prepend.to_owned(),
+    Some(message_prepend) => format!("{} ", message_prepend).to_owned(),
     None => "".to_owned()
   };
 
   
   let weather_report = get_weather(city);
+  let stock_report = get_stock(stock);
 
   let url  = format!("https://api.twilio.com/2010-04-01/Accounts/{}/Messages.json", account_sid).to_owned();
-  let data = format!("From={}&To={}&Body={}{}", from_number, to_number, message_prepend, weather_report);
+  let data = format!("From={}&To={}&Body={}{}{}", from_number, to_number, message_prepend, weather_report, stock_report);
   
   let mut res = get_client()
                 .post(&url)
@@ -70,8 +73,8 @@ fn main() {
 }
 
 
-fn get_config_variable(key: String) -> String {
-  let mut file = File::open("src/public_conf.json").unwrap();
+fn get_config_variable(key: String, filename: String) -> String {
+  let mut file = File::open(filename).unwrap();
   let mut contents = String::new();
   file.read_to_string(&mut contents);
 
@@ -93,7 +96,7 @@ fn get_client() -> Client {
 
 
 fn get_weather(city: String) -> String {
-  let query_url = format!("http://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20weather.forecast%20where%20woeid%20in%20(select%20woeid%20from%20geo.places(1)%20where%20text%3D%22{}%22)%20and%20u%3D'c'&format=json&env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys", &city);
+  let query_url = format!("http://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20weather.forecast%20where%20woeid%20in%20(select%20woeid%20from%20geo.places(1)%20where%20text%3D%22{}%22)%20and%20u%3D'c'&format=json&env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys", &city).to_owned();
 
   let client  = Client::new();
   let mut res = client
@@ -127,13 +130,48 @@ fn format_weather(json: Value) -> String {
   str::replace(&text, "\"", "")
 }
 
+
+fn get_stock(ticker: String) -> String {
+  let query_url = format!("http://finance.yahoo.com/d/quotes.csv?s={}&f=sm", ticker);
+  
+  let client  = Client::new();
+  let mut res = client
+                .get(&query_url)
+                .send()
+                .unwrap_or_else(|e| {
+                  panic!("Error retrieving stock information : {}", e);
+                });
+
+  let mut s = String::new();
+  res.read_to_string(&mut s).unwrap();
+
+  /*
+    Response body format:
+      "TWLO","30.79 - 32.13"
+      "GOOG","862.81 - 875.00"
+  */
+
+  let lines: Vec<&str> = s.split(|c| c == '\n').collect();
+  
+  let mut stock_text = "".to_owned();
+
+  for stock_ticker in lines {
+    let ticker_text: Vec<&str> = stock_ticker.split(|c| c == ',').collect();
+
+    stock_text.push_str(&format!("{}", ticker_text.join(" range ")));
+  }
+
+  stock_text
+}
+
+
 fn print_usage() {
   println!(r#"
     Usage:
-      cargo run <twilio_auth_token> <to_number> "<city_name>" "<message_prepended_text>"
+      cargo run <twilio_auth_token> <to_number> '<city_name>' '<message_prepended_text>'
 
     Example:
-      cargo run 747d2bfff9e6c6e0b7b3c5b3866597db +15556667788 "San Francisco" "Rise and shine!"
+      cargo run 747d2bfff9e6c6e0b7b3c5b3866597db +15556667788 'San Francisco' 'Rise and shine!'
 
     Example Response:
       Text Message to +15556667788 reads "Rise and shine! Currently 10 C and cloudy. Today scattered showers ..."
