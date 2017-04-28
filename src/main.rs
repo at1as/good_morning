@@ -10,6 +10,7 @@ use serde_json::Value;
 use std::env;
 use std::io::Read;
 use std::fs::File;
+use std::path::Path;
 
 
 fn main() {
@@ -63,7 +64,9 @@ fn main() {
 
 
 fn get_config_variable(key: String, filename: String) -> String {
-  let mut file = File::open(filename).unwrap();
+  
+  let path = Path::new(&filename);
+  let mut file = File::open(&path).unwrap();
   let mut contents = String::new();
   file.read_to_string(&mut contents);
 
