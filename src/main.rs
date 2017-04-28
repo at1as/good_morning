@@ -23,11 +23,15 @@ mod weather;
 
 fn main() {
 
-  let account_sid = get_config_variable("account_sid".to_owned(), "src/twilio_conf.json".to_owned());
-  let from_number = get_config_variable("from_number".to_owned(), "src/twilio_conf.json".to_owned());
+  let twilio_conf = "src/conf/twilio_conf.json";
+  let message_conf = "src/conf/message_conf.json";
+
+  let account_sid = get_config_variable("account_sid".to_owned(), twilio_conf.to_owned());
+  let from_number = get_config_variable("from_number".to_owned(), twilio_conf.to_owned());
   
-  let message_prepend = get_config_variable("message_prepend_text".to_owned(), "src/message_conf.json".to_owned());
-  let city = get_config_variable("city_location".to_owned(), "src/message_conf.json".to_owned());
+  let message_prepend = get_config_variable("message_prepend_text".to_owned(), message_conf.to_owned());
+  let city = get_config_variable("city_location".to_owned(), message_conf.to_owned());
+  let stocks = get_config_variable("stocks".to_owned(), message_conf.to_owned());
 
   let auth_token: String = match env::args().nth(1) {
     Some(auth_token) => auth_token.to_owned(),
@@ -45,8 +49,6 @@ fn main() {
     }
   };
 
-  let stocks = get_config_variable("stocks".to_owned(), "src/message_conf.json".to_owned());
-  
   let weather_report = get_weather(city);
   let stock_report = get_stocks(stocks);
 
