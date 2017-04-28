@@ -13,6 +13,9 @@ use std::fs::File;
 use std::path::Path;
 
 
+use weather::get_weather;
+mod weather;
+
 fn main() {
 
   let account_sid = get_config_variable("account_sid".to_owned(), "src/twilio_conf.json".to_owned());
@@ -99,7 +102,7 @@ fn get_client() -> Client {
   Client::with_connector(connector)
 }
 
-
+/*
 fn get_weather(city: String) -> String {
   let query_url = format!("http://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20weather.forecast%20where%20woeid%20in%20(select%20woeid%20from%20geo.places(1)%20where%20text%3D%22{}%22)%20and%20u%3D'c'&format=json&env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys", &city).to_owned();
 
@@ -134,7 +137,7 @@ fn format_weather(json: Value) -> String {
 
   str::replace(&text, "\"", "")
 }
-
+*/
 
 fn get_stock(ticker: String) -> String {
   let query_url = format!("http://finance.yahoo.com/d/quotes.csv?s={}&f=sm", ticker);
