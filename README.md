@@ -48,5 +48,8 @@ Notes:
 ### Notes
 
 * Requires a Twilio account
-* Work in progress
+
+### TODO
+
+* Allow message to be sent via MMS (as text converted to image)
 

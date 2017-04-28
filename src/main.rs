@@ -53,7 +53,8 @@ fn main() {
   let stock_report = get_stocks(stocks);
 
   let url  = format!("https://api.twilio.com/2010-04-01/Accounts/{}/Messages.json", account_sid).to_owned();
-  let data = format!("From={}&To={}&Body={}{}{}", from_number, to_number, message_prepend, weather_report, stock_report);
+  let body = [message_prepend, weather_report, stock_report].join(&" ");
+  let data = format!("From={}&To={}&Body={}", from_number, to_number, body);
   
   let mut res = get_client()
                 .post(&url)
