@@ -35,7 +35,7 @@ fn format_weather(json: Value) -> String {
   let ref daily_low    = json["query"]["results"]["channel"]["item"]["forecast"][0]["low"];
   let ref daily_text   = json["query"]["results"]["channel"]["item"]["forecast"][0]["text"];
 
-  let text = format!("Currently {} C and {}. Today {} with a high of {} and low of {}. Today's sunset is at {}. ", current_temp, current_text, daily_text, daily_high, daily_low, sunset);
+  let text = format!("Currently {} C and {}. Today {} with a high of {} and low of {}. Today's sunset is at {}.", current_temp, current_text, daily_text, daily_high, daily_low, sunset);
 
   str::replace(&text, "\"", "")
 }

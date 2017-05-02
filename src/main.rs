@@ -1,5 +1,8 @@
 extern crate hyper;
 extern crate hyper_native_tls;
+extern crate image;
+extern crate imageproc;
+extern crate rusttype;
 extern crate serde_json;
 
 use hyper::{client, Client, status, Url};
@@ -13,9 +16,11 @@ use std::fs::File;
 use std::path::Path;
 
 /* Local Imports */
+use buildimg::text_to_image;
 use stocks::get_stocks;
 use utils::print_usage;
 use weather::get_weather;
+mod buildimg;
 mod stocks;
 mod utils;
 mod weather;
@@ -55,7 +60,11 @@ fn main() {
   let url  = format!("https://api.twilio.com/2010-04-01/Accounts/{}/Messages.json", account_sid).to_owned();
   let body = [message_prepend, weather_report, stock_report].join(&" ");
   let data = format!("From={}&To={}&Body={}", from_number, to_number, body);
-  
+
+  text_to_image(body, "./abcdef.jpeg".to_owned());
+
+  panic!("Done!");
+
   let mut res = get_client()
                 .post(&url)
                 .body(&data)
