@@ -57,13 +57,14 @@ fn main() {
   let weather_report = get_weather(city);
   let stock_report = get_stocks(stocks);
 
+  // Create SMS
   let url  = format!("https://api.twilio.com/2010-04-01/Accounts/{}/Messages.json", account_sid).to_owned();
-  let body = [message_prepend, weather_report, stock_report].join(&" ");
+  let body = [message_prepend.clone(), weather_report.clone(), stock_report.clone()].join(&" ");
   let data = format!("From={}&To={}&Body={}", from_number, to_number, body);
 
-  text_to_image(body, "./abcdef.jpeg".to_owned());
-
-  panic!("Done!");
+  // Create MMS
+  let text_bodies = vec!(message_prepend, weather_report, stock_report);
+  text_to_image(text_bodies, "./mms.jpeg".to_owned());
 
   let mut res = get_client()
                 .post(&url)
