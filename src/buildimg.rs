@@ -12,7 +12,7 @@ pub fn text_to_image(text_blocks: Vec<String>, filepath: String) {
 
   let path = Path::new(&filepath);
   let mut image = RgbImage::new(400, 600);
-  let font = include_bytes!("DejaVuSans.ttf") as &[u8];
+  let font = include_bytes!("assets/DejaVuSans.ttf") as &[u8];
 
   let height = 10.0;
   let scale = Scale { x: height * 3.0, y: height * 3.0};
