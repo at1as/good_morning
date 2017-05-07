@@ -4,5 +4,7 @@
   "stocks": [
     "TWLO",
     "AMZN"
-  ]
+  ],
+  "send_sms": true,
+  "send_mms": true
 }
