@@ -2,6 +2,7 @@ extern crate hyper;
 extern crate hyper_native_tls;
 extern crate image;
 extern crate imageproc;
+extern crate multipart;
 extern crate rusttype;
 extern crate serde_json;
 
@@ -9,6 +10,7 @@ use hyper::{client, Client, status, Url};
 use hyper::header::{Authorization, Basic, ContentType};
 use hyper::net::HttpsConnector;
 use hyper_native_tls::NativeTlsClient;
+use multipart::client::Multipart;
 use serde_json::Value;
 use std::env;
 use std::io::Read;
@@ -17,10 +19,12 @@ use std::path::Path;
 
 /* Local Imports */
 use buildimg::text_to_image;
+use cloudinary_api::upload_image_multipart;
 use stocks::get_stocks;
 use utils::print_usage;
 use weather::get_weather;
 mod buildimg;
+mod cloudinary_api;
 mod stocks;
 mod utils;
 mod weather;
@@ -56,31 +60,63 @@ fn main() {
 
   let weather_report = get_weather(city);
   let stock_report = get_stocks(stocks);
-
-  // Create SMS
-  let url  = format!("https://api.twilio.com/2010-04-01/Accounts/{}/Messages.json", account_sid).to_owned();
-  let body = [message_prepend.clone(), weather_report.clone(), stock_report.clone()].join(&" ");
-  let data = format!("From={}&To={}&Body={}", from_number, to_number, body);
-
-  // Create MMS
-  let text_bodies = vec!(message_prepend, weather_report, stock_report);
-  text_to_image(text_bodies, "./mms.jpeg".to_owned());
-
-  let mut res = get_client()
-                .post(&url)
-                .body(&data)
-                .header(Authorization(Basic{
-                  username: account_sid.to_string(),
-                  password: Some(auth_token.to_owned())
-                }))
-                .header(ContentType("application/x-www-form-urlencoded".parse().unwrap()))
-                .send()
-                .unwrap();
   
-  let mut s = String::new();
-  res.read_to_string(&mut s).unwrap();
+  let url  = format!("https://api.twilio.com/2010-04-01/Accounts/{}/Messages.json", account_sid).to_owned();
 
-  println!("Server responded with : {}", s);
+  // Create and send SMS
+  if (get_config_variable("send_sms".to_owned(), message_conf.to_owned()) == "true") {
+    let body = [message_prepend.clone(), weather_report.clone(), stock_report.clone()].join(&" ");
+    let data = format!("From={}&To={}&Body={}", from_number, to_number, body);
+
+    let mut res = get_client()
+                  .post(&url)
+                  .body(&data)
+                  .header(Authorization(Basic{
+                    username: account_sid.to_string(),
+                    password: Some(auth_token.to_owned())
+                  }))
+                  .header(ContentType("application/x-www-form-urlencoded".parse().unwrap()))
+                  .send()
+                  .unwrap();
+    
+    let mut s = String::new();
+    res.read_to_string(&mut s).unwrap();
+
+    println!("Sent SMS. Server responded with : {}", s);
+  }
+
+
+  // Create and send MMS
+  if (get_config_variable("send_mms".to_owned(), message_conf.to_owned()) == "true") {
+    
+    // Cloudinary Image Upload Credentials
+    let cloudinary_conf = "src/conf/cloudinary_conf.json";
+    let cloudinary_upload_preset = get_config_variable("upload_preset".to_owned(), cloudinary_conf.to_owned());
+
+    // Create and Upload Image
+    let text_bodies = vec!(message_prepend, weather_report, stock_report);
+    text_to_image(text_bodies, "./mms.jpeg".to_owned());
+    let access_url = upload_image_multipart("mms.jpeg".to_owned(), cloudinary_upload_preset.to_owned());
+    
+    let body = access_url.clone();
+    let data = format!("From={}&To={}&MediaUrl={}", from_number, to_number, body);
+
+    let mut res = get_client()
+                  .post(&url)
+                  .body(&data)
+                  .header(Authorization(Basic{
+                    username: account_sid.to_string(),
+                    password: Some(auth_token.to_owned())
+                  }))
+                  .header(ContentType("application/x-www-form-urlencoded".parse().unwrap()))
+                  .send()
+                  .unwrap();
+    
+    let mut s = String::new();
+    res.read_to_string(&mut s).unwrap();
+
+    println!("Sent MMS. Server responded with : {}", s);
+  }
 }
 
 
@@ -107,6 +143,9 @@ fn get_config_variable(key: String, filename: String) -> String {
       }
 
       str::replace(&stocks.join(&"+"), "\"", "")
+    },
+    Value::Bool(ref v) => {
+      v.to_string()
     },
     _ => "".to_owned()
   }
