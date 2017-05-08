@@ -2,7 +2,7 @@ use hyper::Client;
 use std::io::Read;
 
 
-pub fn get_stocks(ticker: String) -> String {
+pub fn get_stocks(ticker: &str) -> String {
   let query_url = format!("http://finance.yahoo.com/d/quotes.csv?s={}&f=sm", ticker);
   
   let client  = Client::new();

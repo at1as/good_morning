@@ -10,7 +10,7 @@ use image::{Rgb, RgbImage};
 use rusttype::Scale;
 
 
-pub fn text_to_image(text_blocks: Vec<String>, filepath: String) {
+pub fn text_to_image(text_blocks: Vec<String>, filepath: &str) {
 
   /* Colors */
   let mut colors = HashMap::new();
@@ -19,8 +19,8 @@ pub fn text_to_image(text_blocks: Vec<String>, filepath: String) {
   colors.insert("light_blue", Rgb([34u8, 132u8, 201u8]));
   
   /* Image - Blue background with 2px black border */
-  let path = Path::new(&filepath);
-  let mut image = RgbImage::new(400, 600);
+  let path = Path::new(filepath);
+  let mut image = RgbImage::new(400, 650);
   draw_filled_rect_mut(&mut image, Rect::at(2, 2).of_size(396, 596), colors["light_blue"]);
 
   /* Fonts */
@@ -33,7 +33,7 @@ pub fn text_to_image(text_blocks: Vec<String>, filepath: String) {
   let horizontal_offset = 20;
 
   /* Write to Image */
-  for i in (0..text_blocks.len()) {
+  for i in 0..text_blocks.len() {
     
     if text_blocks[i] == "prepend" { continue; } // Don't write heading for this message
     let words = text_blocks[i].split(" ");

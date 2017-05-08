@@ -12,7 +12,6 @@ use hyper::{client, Client, status, Url};
 use hyper::header::{Authorization, Basic, ContentType};
 use hyper::net::HttpsConnector;
 use hyper_native_tls::NativeTlsClient;
-use multipart::client::Multipart;
 use serde_json::Value;
 use std::env;
 use std::io::Read;
@@ -34,15 +33,15 @@ mod weather;
 
 fn main() {
 
-  let twilio_conf = "src/conf/twilio_conf.json";
+  let twilio_conf  = "src/conf/twilio_conf.json";
   let message_conf = "src/conf/message_conf.json";
 
-  let account_sid = get_config_variable("account_sid".to_owned(), twilio_conf.to_owned());
-  let from_number = get_config_variable("from_number".to_owned(), twilio_conf.to_owned());
+  let account_sid  = get_config_variable("account_sid", twilio_conf);
+  let from_number  = get_config_variable("from_number", twilio_conf);
   
-  let message_prepend = get_config_variable("message_prepend_text".to_owned(), message_conf.to_owned());
-  let city = get_config_variable("city_location".to_owned(), message_conf.to_owned());
-  let stocks = get_config_variable("stocks".to_owned(), message_conf.to_owned());
+  let message_prepend = get_config_variable("message_prepend_text", message_conf);
+  let city: &str      = &*get_config_variable("city_location", message_conf);
+  let stocks: &str    = &*get_config_variable("stocks", message_conf);
 
   let auth_token: String = match env::args().nth(1) {
     Some(auth_token) => auth_token.to_owned(),
@@ -61,17 +60,17 @@ fn main() {
   };
 
   let weather_report = get_weather(city);
-  let stock_report = get_stocks(stocks);
+  let stock_report   = get_stocks(stocks);
   
-  let url  = format!("https://api.twilio.com/2010-04-01/Accounts/{}/Messages.json", account_sid).to_owned();
+  let url: &str = &*format!("https://api.twilio.com/2010-04-01/Accounts/{}/Messages.json", account_sid);
 
   // Create and send SMS
-  if (get_config_variable("send_sms".to_owned(), message_conf.to_owned()) == "true") {
+  if get_config_variable("send_sms", message_conf) == "true" {
     let body = [message_prepend.clone(), weather_report.clone(), stock_report.clone()].join(&" ");
     let data = format!("From={}&To={}&Body={}", from_number, to_number, body);
 
     let mut res = get_client()
-                  .post(&url)
+                  .post(url)
                   .body(&data)
                   .header(Authorization(Basic{
                     username: account_sid.to_string(),
@@ -89,38 +88,41 @@ fn main() {
 
 
   // Create and send MMS
-  if (get_config_variable("send_mms".to_owned(), message_conf.to_owned()) == "true") {
+  if get_config_variable("send_mms", message_conf) == "true" {
     
     // Cloudinary Image Upload Credentials
     let cloudinary_conf = "src/conf/cloudinary_conf.json";
-    let cloudinary_upload_preset = get_config_variable("upload_preset".to_owned(), cloudinary_conf.to_owned());
+    let cloudinary_upload_preset = get_config_variable("upload_preset", cloudinary_conf);
 
     
     // Create Timestamp for Message
     let time = Local::now();
     let hour = time.hour();
     let min  = if time.minute() < 10 { 
-                  format!("0{}", time.minute())
-                } else {
-                  format!("{}", time.minute())
-                };
+                 format!("0{}", time.minute())
+               } else {
+                 format!("{}", time.minute())
+               };
 
-    let time_stamp = format!("{}:{} – ", hour, min);
+    let time_stamp = format!("{}h{} – ", hour, min);
     
     // Create and Upload Image
     let message_prepend_with_timestamp = format!("{}{}", time_stamp, message_prepend);
-    let text_bodies = vec!("prepend".to_owned(), message_prepend_with_timestamp,
-                           "Weather Report:".to_string(), weather_report,
-                           "Stock Report:".to_owned(), stock_report);
+    let text_bodies = vec!("prepend".to_string(),
+                           message_prepend_with_timestamp,
+                           format!("Weather: {}", city.clone()),
+                           weather_report,
+                           "Stock Report:".to_string(),
+                           stock_report);
 
-    text_to_image(text_bodies, "./mms.jpeg".to_owned());
-    let access_url = upload_image_multipart("mms.jpeg".to_owned(), cloudinary_upload_preset.to_owned());
+    text_to_image(text_bodies, "./mms.jpeg");
+    let access_url = upload_image_multipart("mms.jpeg", cloudinary_upload_preset.as_str());
     
     let body = access_url.clone();
     let data = format!("From={}&To={}&MediaUrl={}", from_number, to_number, body);
 
     let mut res = get_client()
-                  .post(&url)
+                  .post(url)
                   .body(&data)
                   .header(Authorization(Basic{
                     username: account_sid.to_string(),
@@ -138,7 +140,7 @@ fn main() {
 }
 
 
-fn get_config_variable(key: String, filename: String) -> String {
+fn get_config_variable(key: &str, filename: &str) -> String {
   
   let path = Path::new(&filename);
   let mut file = File::open(&path).unwrap();

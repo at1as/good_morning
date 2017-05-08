@@ -1,17 +1,13 @@
 extern crate serde_json;
 
 use serde_json::Value;
-use hyper::{Client, Url, Result};
-use hyper::header::{Headers, ContentDisposition, DispositionType, DispositionParam, Charset, ContentType};
-use hyper::mime::Mime;
+use hyper::{Url, Result};
 use hyper::method::Method;
 use hyper::client::Request;
 use hyper::net::Streaming;
 use multipart::client::Multipart;
 use std::io::Read;
-use std::io::Write;
 use std::fs::File;
-use std::str::FromStr;
 use std::path::Path;
 
 
@@ -19,11 +15,11 @@ use std::path::Path;
    with the JPEG that is then passed to Twilio to as a parameter in the MMS request */
 
 
-pub fn upload_image_multipart(image_name: String, upload_preset: String) -> String {
+pub fn upload_image_multipart(image_name: &str, upload_preset: &str) -> String {
 
   /* Build Request */
   let upload_url = Url::parse("http://api.cloudinary.com/v1_1/at1as/image/upload").unwrap();
-  let mut req = Request::new(Method::Post, upload_url).unwrap();
+  let req = Request::new(Method::Post, upload_url).unwrap();
   let mut multipart = Multipart::from_request(req).unwrap();
 
   write_body(&mut multipart, image_name, upload_preset).unwrap();
@@ -53,7 +49,7 @@ pub fn upload_image_multipart(image_name: String, upload_preset: String) -> Stri
       http://cloudinary.com/documentation/upload_images#unsigned_upload
       http://cloudinary.com/documentation/upload_images#upload_presets  */
 
-fn write_body(multi: &mut Multipart<Request<Streaming>>, image_name: String, upload_preset: String) -> Result<()> {
+fn write_body(multi: &mut Multipart<Request<Streaming>>, image_name: &str, upload_preset: &str) -> Result<()> {
   let path = Path::new(&image_name);
   let mut binary = File::open(&path).unwrap();
 
