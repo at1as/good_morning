@@ -5,6 +5,7 @@ license = "MIT"
 authors = ["Jason Willems <jason@willems.ca>"]
 
 [dependencies]
+chrono = "0.3.1"
 hyper = "0.10"
 hyper-native-tls = "0.2.2"
 image = "0.13"

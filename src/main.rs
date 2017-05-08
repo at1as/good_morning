@@ -1,3 +1,4 @@
+extern crate chrono;
 extern crate hyper;
 extern crate hyper_native_tls;
 extern crate image;
@@ -6,6 +7,7 @@ extern crate multipart;
 extern crate rusttype;
 extern crate serde_json;
 
+use chrono::prelude::*;
 use hyper::{client, Client, status, Url};
 use hyper::header::{Authorization, Basic, ContentType};
 use hyper::net::HttpsConnector;
@@ -93,8 +95,21 @@ fn main() {
     let cloudinary_conf = "src/conf/cloudinary_conf.json";
     let cloudinary_upload_preset = get_config_variable("upload_preset".to_owned(), cloudinary_conf.to_owned());
 
+    
+    // Create Timestamp for Message
+    let time = Local::now();
+    let hour = time.hour();
+    let min  = if time.minute() < 10 { 
+                  format!("0{}", time.minute())
+                } else {
+                  format!("{}", time.minute())
+                };
+
+    let time_stamp = format!("{}:{} – ", hour, min);
+    
     // Create and Upload Image
-    let text_bodies = vec!("prepend".to_owned(), message_prepend,
+    let message_prepend_with_timestamp = format!("{}{}", time_stamp, message_prepend);
+    let text_bodies = vec!("prepend".to_owned(), message_prepend_with_timestamp,
                            "Weather Report:".to_string(), weather_report,
                            "Stock Report:".to_owned(), stock_report);
 
