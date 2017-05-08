@@ -18,13 +18,13 @@ use std::fs::File;
 use std::path::Path;
 
 /* Local Imports */
-use buildimg::text_to_image;
 use cloudinary_api::upload_image_multipart;
+use create_image::text_to_image;
 use stocks::get_stocks;
 use utils::print_usage;
 use weather::get_weather;
-mod buildimg;
 mod cloudinary_api;
+mod create_image;
 mod stocks;
 mod utils;
 mod weather;
@@ -94,7 +94,10 @@ fn main() {
     let cloudinary_upload_preset = get_config_variable("upload_preset".to_owned(), cloudinary_conf.to_owned());
 
     // Create and Upload Image
-    let text_bodies = vec!(message_prepend, weather_report, stock_report);
+    let text_bodies = vec!("prepend".to_owned(), message_prepend,
+                           "Weather Report:".to_string(), weather_report,
+                           "Stock Report:".to_owned(), stock_report);
+
     text_to_image(text_bodies, "./mms.jpeg".to_owned());
     let access_url = upload_image_multipart("mms.jpeg".to_owned(), cloudinary_upload_preset.to_owned());
     
